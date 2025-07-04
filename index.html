@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Digital Shaker - Order Cocktails</title>
+    <style>
+        /* All CSS is almost the same, with two new rules */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
+        :root { --primary-color: #f8f9fa; --secondary-color: #6c757d; --accent-color: #0077b6; --text-color: #212529; --card-bg: #ffffff; --success-color: #2a9d8f; --label-recommend-bg: #e63946; --star-color: #ffc107;}
+        body { font-family: 'Poppins', sans-serif; background-color: var(--primary-color); color: var(--text-color); margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .navigation-controls { position: fixed; top: 25px; left: 30px; z-index: 1001; display: flex; gap: 10px; }
+        .nav-btn { background-color: var(--card-bg); border: 2px solid var(--accent-color); color: var(--accent-color); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; line-height: 1; }
+        .nav-btn:hover:not(:disabled) { background-color: var(--accent-color); color: white; }
+        .nav-btn:disabled { background-color: #e9ecef; color: #adb5bd; border-color: #ced4da; cursor: not-allowed; }
+        .cart-icon-container { position: fixed; top: 25px; right: 30px; z-index: 1001; cursor: pointer; font-size: 2rem; color: var(--text-color); }
+        .cart-item-count { position: absolute; top: -8px; right: -12px; background-color: var(--label-recommend-bg); color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; font-size: 0.8rem; font-weight: 600; border: 2px solid var(--card-bg); transition: transform 0.2s ease, opacity 0.2s ease; transform: scale(0); opacity: 0; }
+        .cart-item-count.visible { transform: scale(1); opacity: 1; }
+        header { width: 100%; text-align: center; margin-bottom: 40px; padding-top: 50px; }
+        #page-title { font-family: 'Playfair Display', serif; font-size: 3rem; color: var(--accent-color); margin: 0; }
+        .menu-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; min-height: 400px; transition: all 0.3s ease-in-out; }
+        
+        .cocktail-card { 
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            text-align: center; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; 
+            position: relative; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column;
+            border: 3px solid transparent; /* Add transparent border to prevent layout shift */
+        }
+        
+        /* NEW: Style for the selected card */
+        .cocktail-card.selected {
+            border-color: var(--label-recommend-bg); /* Red border */
+            box-shadow: 0 6px 20px rgba(230, 57, 70, 0.3);
+        }
+
+        .cocktail-image-container { position: relative; width: 100%; padding-top: 75%; height: 0; background-color: var(--card-bg); }
+        .cocktail-image-container img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+        .card-content { padding: 15px 20px 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .sub-label { font-size: 0.75rem; color: var(--secondary-color); margin-bottom: 4px; font-weight: 500; }
+        .cocktail-label { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: var(--card-bg); background-color: var(--text-color); margin-bottom: 10px; margin-left: auto; margin-right: auto; }
+        .label-icon { height: 1.5em; width: auto; vertical-align: middle; }
+        .star-rating .filled { color: var(--star-color); } .star-rating .empty { color: #ccc; }
+        .rating-count { color: #ccc; font-size: 0.75rem; }
+        .add-to-order-btn { background-color: var(--card-bg); color: var(--text-color); border: 2px solid var(--text-color); padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background-color 0.2s, color 0.2s, transform 0.1s; width: 100%; font-size: 1rem; }
+        .add-to-order-btn:hover:not(:disabled) { background-color: var(--text-color); color: var(--card-bg); transform: scale(1.05); }
+        .add-to-order-btn:disabled, .add-to-order-btn:disabled:hover { background-color: #e9ecef; color: #adb5bd; border-color: #dee2e6; cursor: not-allowed; transform: none; }
+        #place-order-btn, .modal-btn.confirm, .modal-btn.cancel { background-color: var(--accent-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background-color 0.2s, transform 0.2s; width: 100%; font-size: 1rem; }
+        .modal-btn.confirm { background-color: var(--success-color); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.3s ease; opacity: 0; pointer-events: none; }
+        .modal-content { background: var(--card-bg); padding: 30px; border-radius: 12px; text-align: center; width: 90%; max-width: 450px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        .modal-buttons { display: flex; gap: 15px; margin-top: 25px; }
+        #order-items li { border-bottom: 1px solid #dee2e6; } #empty-cart-message { text-align: center; color: var(--secondary-color); padding: 40px 0; }
+    </style>
+</head>
+<body>
+    <div class="navigation-controls"><button id="back-btn" class="nav-btn" title="Back">◄</button><button id="forward-btn" class="nav-btn" title="Forward">►</button><button id="refresh-btn" class="nav-btn" title="Refresh">↻</button></div>
+    <div id="cart-icon" class="cart-icon-container"><span>🛒</span><div id="cart-item-count" class="cart-item-count">0</div></div>
+    <div class="container"><header><h1 id="page-title">🍸 The Digital Shaker</h1><p>A New Round, Every Time.</p></header><div id="menu-container" class="menu-container"></div></div>
+    <div id="confirmation-modal" class="modal-overlay"><div class="modal-content"><h2>Confirm Selection</h2><p id="modal-cocktail-info"></p><div class="modal-buttons"><button id="modal-cancel-btn" class="modal-btn cancel" style="background-color: #6c757d;">Cancel</button><button id="modal-confirm-btn" class="modal-btn confirm">Confirm</button></div></div></div>
+    <div id="cart-modal" class="modal-overlay"><div class="modal-content"><h2>Your Order</h2><ul id="order-items"></ul><div class="order-total" style="border-top: 2px solid var(--accent-color);"><span>Total:</span><span id="total-price">¥0</span></div><button id="place-order-btn">Place Order</button></div></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const MASTER_COCKTAIL_NAMES = [ 'BarHarbor', 'Barstow', 'Bisbee', 'Boonville', 'Eureka', 'Hilo', 'Kalispell', 'Ketchikan', 'Luray', 'Marfa', 'Ajo', 'Oroville', 'Wasilla', 'Moab', 'Poughkeepsie', 'Sedona', 'Taos', 'Telluride', 'Yreka', 'Duluth'];
+            const IMAGE_FILE_EXTENSION = '.png';
+            const UNIFORM_PRICE = 880;
+            const BASE_TITLE_TEXT = '🍸 The Digital Shaker';
+            
+            let pageHistory = [], historyIndex = -1;
+            let currentOrder = [], cocktailToConfirm = null;
+            
+            const menuContainer = document.getElementById('menu-container'), confirmModal = document.getElementById('confirmation-modal'), modalCocktailInfo = document.getElementById('modal-cocktail-info'), confirmBtn = document.getElementById('modal-confirm-btn'), cancelBtn = document.getElementById('modal-cancel-btn'), cartIcon = document.getElementById('cart-icon'), cartModal = document.getElementById('cart-modal'), placeOrderButton = document.getElementById('place-order-btn'), pageTitle = document.getElementById('page-title'), backBtn = document.getElementById('back-btn'), forwardBtn = document.getElementById('forward-btn'), refreshBtn = document.getElementById('refresh-btn');
+
+            // --- All Helper Functions are unchanged ---
+            function nameToImagePath(name) { const fileName = name.toLowerCase().replace(/\s+/g, '-'); return `images/${fileName}${IMAGE_FILE_EXTENSION}`; }
+            const createViewingLabel = () => ({ html: `<img src="images/eye-icon.png" alt="viewing icon" class="label-icon"> ${Math.floor(Math.random() * 9) + 2} people are viewing` });
+            const createOrderedLabel = () => ({ html: `${Math.floor(Math.random() * 71) + 10} ordered in past week` });
+            const createBartenderLabel = () => ({ html: `Bartender's Recommendation` });
+            const createLimitedLabel = () => ({ html: `Limited Time Only` });
+            const generateRatingScore = () => (Math.random() * 1.8 + 3.0).toFixed(1);
+            function createRatingStars(score) { let stars = ''; const roundedScore = Math.round(score); for (let i = 1; i <= 5; i++) { stars += i <= roundedScore ? `<span class="filled">★</span>` : `<span class="empty">☆</span>`; } return `<span class="star-rating">${stars}</span>`; }
+            const createPersonalizedRecommendationLabel = () => ({ html: 'Recommended for You', subHtml: 'based on what u have selected' });
+            function createFullRatingLabel(score) { return { html: `${createRatingStars(parseFloat(score))} <span class="rating-score">${score}</span> <span class="rating-count">(${Math.floor(Math.random() * 70) + 10})</span>` }; }
+            
+            // --- RE-ARCHITECTED CORE LOGIC ---
+            function generatePageData(selectionCount, cocktailNameToKeep = null, previousMenuItems = []) {
+                let menuSize;
+                if (selectionCount === 6) menuSize = 4;
+                else if (selectionCount === 7) menuSize = 12;
+                else menuSize = 8;
+                
+                let finalMenuItems;
+                if (cocktailNameToKeep) {
+                    let keeper = previousMenuItems.find(item => item.name === cocktailNameToKeep);
+                    if (keeper) {
+                        keeper = { ...keeper }; // Create a copy
+                        if (selectionCount !== 2 && selectionCount !== 5) {
+                            delete keeper.label; delete keeper.subLabel;
+                        }
+                    }
+                    const currentNames = previousMenuItems.map(item => item.name);
+                    const availableNames = MASTER_COCKTAIL_NAMES.filter(name => !currentNames.includes(name));
+                    const newNames = availableNames.sort(() => 0.5 - Math.random()).slice(0, menuSize - 1);
+                    let newItems = newNames.map(name => ({ name, imagePath: nameToImagePath(name), price: UNIFORM_PRICE }));
+                    finalMenuItems = keeper ? [keeper, ...newItems] : newItems;
+
+                    let partialLabelGenerator = null;
+                    switch (selectionCount) {
+                        case 1: partialLabelGenerator = createViewingLabel; break;
+                        case 3: partialLabelGenerator = createBartenderLabel; break;
+                        case 4: partialLabelGenerator = createLimitedLabel; break;
+                        case 8: partialLabelGenerator = createPersonalizedRecommendationLabel; break;
+                    }
+                    if (partialLabelGenerator) {
+                        const itemsToLabel = finalMenuItems.filter(item => item.name !== cocktailNameToKeep);
+                        const labelsToShow = 4;
+                        const indices = [...Array(itemsToLabel.length).keys()].sort(() => 0.5 - Math.random());
+                        for (let i = 0; i < Math.min(labelsToShow, itemsToLabel.length); i++) {
+                            itemsToLabel[indices[i]].label = partialLabelGenerator();
+                        }
+                    }
+                    if (selectionCount === 2) {
+                        finalMenuItems.forEach(item => item.label = createOrderedLabel());
+                    } else if (selectionCount === 5) {
+                        const ratingCounts = {};
+                        finalMenuItems.forEach(item => {
+                            let score;
+                            do { score = generateRatingScore(); } while (ratingCounts[score] >= 2);
+                            ratingCounts[score] = (ratingCounts[score] || 0) + 1;
+                            item.label = createFullRatingLabel(score);
+                        });
+                    }
+                    finalMenuItems.sort(() => 0.5 - Math.random());
+                } else {
+                    const shuffledNames = MASTER_COCKTAIL_NAMES.sort(() => 0.5 - Math.random());
+                    const selectedNames = shuffledNames.slice(0, menuSize);
+                    finalMenuItems = selectedNames.map(name => ({ name, imagePath: nameToImagePath(name), price: UNIFORM_PRICE }));
+                }
+                return finalMenuItems;
+            }
+
+            function renderPageFromHistory() {
+                if (historyIndex < 0 || historyIndex >= pageHistory.length) return;
+                const { selectionCount, menuItems, selectedCocktailName } = pageHistory[historyIndex];
+                
+                menuContainer.innerHTML = '';
+                const isSelectionOver = selectionCount >= 9;
+                menuItems.forEach(item => {
+                    const card = document.createElement('div');
+                    // THE FIX IS HERE (Part 1): Add 'selected' class if names match
+                    card.className = `cocktail-card ${item.name === selectedCocktailName ? 'selected' : ''}`;
+                    
+                    const subLabelHtml = item.label && item.label.subHtml ? `<div class="sub-label">${item.label.subHtml}</div>` : '';
+                    const labelHtml = item.label ? `<div class="cocktail-label">${item.label.html}</div>` : '';
+                    const buttonText = isSelectionOver ? 'Selection Over' : 'Add to Order';
+                    const disabledAttr = isSelectionOver ? 'disabled' : '';
+
+                    card.innerHTML = `<div class="cocktail-image-container"><img src="${item.imagePath}" alt="${item.name}"></div><div class="card-content"><div>${subLabelHtml}${labelHtml}<h3>${item.name}</h3><p class="price">¥${item.price}</p></div><button class="add-to-order-btn" data-name="${item.name}" ${disabledAttr}>${buttonText}</button></div>`;
+                    menuContainer.appendChild(card);
+                });
+                
+                const pageNumber = selectionCount + 1;
+                pageTitle.textContent = (pageNumber <= 10) ? `${String(pageNumber).padStart(2, '0')} ${BASE_TITLE_TEXT}` : BASE_TITLE_TEXT;
+
+                backBtn.disabled = historyIndex === 0;
+                forwardBtn.disabled = historyIndex === pageHistory.length - 1;
+            }
+            
+            function navigateToNewPage(cocktailNameToKeep = null, previousSelectionCount = -1) {
+                if (historyIndex < pageHistory.length - 1) { pageHistory = pageHistory.slice(0, historyIndex + 1); }
+                const previousMenuItems = pageHistory[historyIndex] ? pageHistory[historyIndex].menuItems : [];
+                const selectionCount = previousSelectionCount + 1;
+                const newMenuItems = generatePageData(selectionCount, cocktailNameToKeep, previousMenuItems);
+                
+                // THE FIX IS HERE (Part 2): Store the selected cocktail name in the *previous* history entry.
+                if (cocktailNameToKeep && pageHistory[historyIndex]) {
+                    pageHistory[historyIndex].selectedCocktailName = cocktailNameToKeep;
+                }
+
+                pageHistory.push({ selectionCount, menuItems: newMenuItems, selectedCocktailName: null });
+                historyIndex++;
+                renderPageFromHistory();
+            }
+
+            function confirmAndRefresh() {
+                if (!cocktailToConfirm) return;
+                const existingItem = currentOrder.find(item => item.name === cocktailToConfirm.name);
+                if (existingItem) { existingItem.quantity++; } else { currentOrder.push({ ...cocktailToConfirm, quantity: 1 }); }
+                updateOrderDisplay();
+                hideModal(confirmModal);
+                
+                navigateToNewPage(cocktailToConfirm.name, pageHistory[historyIndex].selectionCount);
+            }
+            
+            function hardReset() { currentOrder = []; pageHistory = []; historyIndex = -1; updateOrderDisplay(); navigateToNewPage(null, -1); }
+            function placeOrder() { if (currentOrder.length === 0) { alert("Your cart is empty!"); return; } const orderDetails = currentOrder.map(item => `${item.quantity}x ${item.name}`).join(', '); alert(`Order Placed!\n\nItems: ${orderDetails}\nTotal: ${document.getElementById('total-price').textContent}\n\nThank you!`); hideModal(cartModal); hardReset(); }
+            function showModal(modalElement) { modalElement.classList.add('visible'); }
+            function hideModal(modalElement) { modalElement.classList.remove('visible'); }
+            function updateOrderDisplay() { const orderItemsList = document.querySelector('#cart-modal #order-items'); const totalPriceEl = document.querySelector('#cart-modal #total-price'); orderItemsList.innerHTML = ''; if (currentOrder.length === 0) { orderItemsList.innerHTML = '<li><p id="empty-cart-message">Your cart is currently empty.</p></li>'; } let total = 0; currentOrder.forEach(item => { const li = document.createElement('li'); const itemTotal = item.price * item.quantity; li.innerHTML = `<span>${item.quantity}x ${item.name}</span><span>¥${itemTotal}</span>`; orderItemsList.appendChild(li); total += item.price * item.quantity; }); totalPriceEl.textContent = `¥${total}`; const cartItemCountBadge = document.getElementById('cart-item-count'); const totalItems = currentOrder.reduce((sum, item) => sum + item.quantity, 0); cartItemCountBadge.textContent = totalItems; cartItemCountBadge.classList.toggle('visible', totalItems > 0); }
+            
+            menuContainer.addEventListener('click', (event) => { if (event.target.classList.contains('add-to-order-btn') && !event.target.disabled) { const cocktailName = event.target.dataset.name; cocktailToConfirm = { name: cocktailName, imagePath: nameToImagePath(cocktailName), price: UNIFORM_PRICE }; modalCocktailInfo.innerHTML = `Add <strong>${cocktailToConfirm.name}</strong> to your order?`; showModal(confirmModal); } });
+            confirmBtn.addEventListener('click', confirmAndRefresh);
+            cancelBtn.addEventListener('click', () => hideModal(confirmModal));
+            placeOrderButton.addEventListener('click', placeOrder);
+            cartIcon.addEventListener('click', () => showModal(cartModal));
+            backBtn.addEventListener('click', () => { if (historyIndex > 0) { historyIndex--; renderPageFromHistory(); }});
+            forwardBtn.addEventListener('click', () => { if (historyIndex < pageHistory.length - 1) { historyIndex++; renderPageFromHistory(); }});
+            refreshBtn.addEventListener('click', hardReset);
+            confirmModal.addEventListener('click', (event) => { if (event.target === confirmModal) hideModal(confirmModal); });
+            cartModal.addEventListener('click', (event) => { if (event.target === cartModal) hideModal(cartModal); });
+
+            navigateToNewPage(null, -1);
+            updateOrderDisplay();
+        });
+    </script>
+</body>
+</html>
